@@ -47,6 +47,7 @@ export default function LedgerPage() {
   };
 
   const voice = () => {
+    if (listening) return;
     const stop = listen('ur-PK', (t) => {
       const a = parseAmount(t);
       if (a) setAmount(String(a));
@@ -54,8 +55,19 @@ export default function LedgerPage() {
       if (p) setPurpose(p);
       setNote(t);
       setListening(false);
-    }, () => setListening(false));
-    if (stop) setListening(true);
+      if (a) {
+        setMsg(`Awaaz se raqam darj ho gayi: Rs. ${a}. Niche "Kharcha likhein" par tap karein.`);
+      } else {
+        setMsg(`Awaaz suni: "${t}". Raqam khud likh dein.`);
+      }
+    }, () => setListening(false), (err) => {
+      setListening(false);
+      if (err === 'not-allowed') setMsg('Microphone ki ijazat dein (address bar se allow karein).');
+    });
+    if (stop) {
+      setListening(true);
+      setMsg('Bol kar batayein (jaise: "paanch hazaar rashan")...');
+    }
   };
 
   const fromSms = () => {

@@ -70,12 +70,54 @@ function detectScreenIndex(pb: Playbook, ocr: string | undefined, fallback: numb
   return best.score >= 0.3 ? { idx: best.idx, confidence: Math.min(0.95, 0.5 + best.score / 2) } : { idx: fallback, confidence: 0.5 };
 }
 
+function answerGeneralQuestion(msg: string, b?: string | null): AssistantStep | null {
+  const m = msg.toLowerCase();
+  const bank = bankById(b ?? undefined);
+  const helpline = bank?.helplines?.[0] ? ` ${bank.name} helpline: ${bank.helplines[0]}.` : '';
+
+  if (/^(salam|assalam|aoa|hello|hi|hey|adaab|kese ho|kaise ho|kya haal|assalam-o-alaikum)\b|سلام|وعلیکم/i.test(m)) {
+    return base({
+      next_instruction_ur: 'وعلیکم السلام! میں بینک ساتھی ہوں۔ میں آپ کو بینک ایپ چلانے، بیلنس دیکھنے، رقم بھیجنے اور بل بھرنے میں قدم بہ قدم رہنمائی کروں گا۔ بتائیں کیا مدد چاہیے؟',
+      next_instruction_roman: 'Walaikum Assalam! Main Bank Saathi hoon. Main aap ko bank app chalane, balance dekhne, raqam bhejne aur bill bharne mein madad karunga. Batayein kya madad chahiye?',
+    });
+  }
+
+  if (/card\s*(block|band|kho|gum|stolen|chori)|کارڈ\s*(بلاک|بند|گم)/i.test(m)) {
+    return base({
+      next_instruction_ur: `فوری طور پر کارڈ بلاک کروائیں۔ اپنی بینک ایپ میں "Cards" سیکشن میں جائیں اور "Block Card" کریں، یا فوری ہیلپ لائن پر کال کریں۔${helpline} کسی کو او ٹی پی نہ بتائیں۔`,
+      next_instruction_roman: `Fauri card block karwayein. Apni bank app mein "Cards" section mein ja kar "Block Card" karein, ya helpline par call karein.${helpline} Kisi ko bhi OTP na batayein.`,
+      warnings: ['Card kho jane par fauri block karwana zaroori hai. Kisi ko PIN ya OTP na dein.'],
+    });
+  }
+
+  if (/atm|cash\s*(nahin|nahi|phans|stuck|nikla)|اے\s*ٹی\s*ایم/i.test(m)) {
+    return base({
+      next_instruction_ur: `اگر اے ٹی ایم سے رقم نہ نکلے لیکن کٹ جائے: اے ٹی ایم کی پرچی سنبھال لیں اور 24 گھنٹے کے اندر ہیلپ لائن پر کال کر کے ٹرانزیکشن ریفرنس کے ساتھ شکایت درج کروائیں۔${helpline}`,
+      next_instruction_roman: `Agar ATM se raqam na nikle lekin message aa jaye: ATM ki slip sambhalein aur fauri bank helpline par call karke complaint number darj karwayein.${helpline}`,
+    });
+  }
+
+  if (/scam|fraud|dhoka|fake\s*call|fake\s*sms|فراڈ|دھوکہ/i.test(m)) {
+    return base({
+      next_instruction_ur: 'کوئی بھی بینک کبھی فون پر آپ سے PIN، OTP، پاس ورڈ یا کارڈ کے پیچھے لکھا CVV نمبر نہیں مانگتا۔ ایسا میسج یا کال آئے تو فوراً فون کاٹ دیں۔ مزید معلومات کے لیے "Fraud check" ٹیب دیکھیں۔',
+      next_instruction_roman: 'Koi bhi bank kabhi phone par PIN, OTP ya password nahi maangta. Aisi call ya SMS fauri cut karein. Hamara "Fraud check" tool istemal karein.',
+    });
+  }
+
+  return null;
+}
+
 /** Offline engine: deterministic, playbook-driven. Used when no AI key is set and as a fallback. */
 export function playbookEngine(req: AssistantRequest): EngineReply {
   const state = { ...req.state };
   const msg = req.message.trim();
   const guard = secretGuard(msg, req.ocrText);
   if (guard) return { step: guard, state, mode: 'playbook' };
+
+  if (msg && !req.image) {
+    const general = answerGeneralQuestion(msg, state.bank);
+    if (general) return { step: general, state, mode: 'playbook' };
+  }
 
   // Recovery commands (F1-8)
   if (/\b(lost|shuru|start over|restart|home screen)\b|گم/i.test(msg)) {
@@ -133,10 +175,44 @@ export function playbookEngine(req: AssistantRequest): EngineReply {
         mode: 'playbook',
       };
     }
+    const bName = bankName(state.bank) ?? 'bank';
+    if (state.task === 'check_balance') {
+      return {
+        step: base({
+          next_instruction_ur: `بیلنس دیکھنے کے لیے: اپنی ${bName} ایپ میں لاگ ان کریں، ہوم اسکرین پر اپنے اکاؤنٹ کے سامنے آنکھ (Eye) والے نشان پر ٹیپ کریں۔ اگر بٹن نہ ملے تو اسکرین شاٹ بھیجیں۔`,
+          next_instruction_roman: `Balance dekhne ke liye: apni ${bName} app mein login karein, main screen par account ke samne "Eye" (aankh) icon par tap karein. Agar button na mile to screenshot bhejein.`,
+          warnings: ['Login ka password ya PIN sirf apni app mein khud dalein.'],
+        }),
+        state,
+        mode: 'playbook',
+      };
+    }
+    if (state.task === 'send_money') {
+      return {
+        step: base({
+          next_instruction_ur: `پیسے بھیجنے کے لیے: اپنی ${bName} ایپ میں "Send Money" یا "Transfer" یا "Raast" پر ٹیپ کریں۔ جس کو بھیجنے ہیں اس کا اکاؤنٹ نمبر لکھیں۔ قدم بہ قدم سیکھنے کے لیے اسکرین شاٹ بھیجیں۔`,
+          next_instruction_roman: `Paise bhejne ke liye: apni ${bName} app mein "Send Money" ya "Transfer" ya "Raast" par tap karein. Nayi screen ka screenshot bhejein to main agla button highlight karunga.`,
+          warnings: ['Login ka password ya PIN kisi ko na batayein.'],
+        }),
+        state,
+        mode: 'playbook',
+      };
+    }
+    if (state.task === 'pay_bill') {
+      return {
+        step: base({
+          next_instruction_ur: `بل ادا کرنے کے لیے: اپنی ${bName} ایپ میں "Bills" یا "Bill Payment" پر جائیں، کمپنی چنیں اور کنزیومر نمبر درج کریں۔ رہنمائی کے لیے اسکرین شاٹ بھیجیں۔`,
+          next_instruction_roman: `Bill ada karne ke liye: apni ${bName} app mein "Bills" ya "Bill Payment" par jayein, company chunein aur consumer number dalein. Nayi screen ka screenshot bhejein.`,
+          warnings: ['Bill payment se pehle consumer number aur amount achhi tarah check karein.'],
+        }),
+        state,
+        mode: 'playbook',
+      };
+    }
     return {
       step: base({
-        next_instruction_ur: `براہ کرم اپنی ${bankName(state.bank) ?? 'بینک'} ایپ کھولیں، خود لاگ ان کریں، اور مین اسکرین کا اسکرین شاٹ بھیجیں۔`,
-        next_instruction_roman: `Meharbani kar ke apni ${bankName(state.bank) ?? 'bank'} app kholein, login khud karein, aur main screen ka screenshot bhejein.`,
+        next_instruction_ur: `براہ کرم اپنی ${bName} ایپ کھولیں، خود لاگ ان کریں، اور مین اسکرین کا اسکرین شاٹ بھیجیں۔`,
+        next_instruction_roman: `Meharbani kar ke apni ${bName} app kholein, login khud karein, aur main screen ka screenshot bhejein.`,
         warnings: ['Login ka password ya PIN sirf apni app mein khud dalein. Login screen ka screenshot na bhejein.'],
       }),
       state,

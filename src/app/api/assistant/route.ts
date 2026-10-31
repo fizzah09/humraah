@@ -40,24 +40,29 @@ const SCHEMA = {
 };
 
 async function callAI(req: AssistantRequest): Promise<AssistantStep | null> {
-  if (!geminiConfigured() || !req.image) return null;
-  const m = req.image.match(/^data:(image\/(png|jpeg|webp));base64,(.+)$/);
-  if (!m) return null;
+  if (!geminiConfigured()) return null;
+  const m = req.image ? req.image.match(/^data:(image\/(png|jpeg|webp));base64,(.+)$/) : null;
+  if (!m && !req.message?.trim()) return null;
   const bank = detectBank(req.message) ?? req.state.bank;
   const task = detectTask(req.message) ?? req.state.task;
   const pb = findPlaybook(task);
   const context = [
     `Bank app: ${bankName(bank) ?? 'unknown'}. Task: ${task ?? 'unknown'}. Steps completed so far: ${req.state.stepIndex}.`,
-    pb ? `Common task pattern (label variants, NOT guaranteed for this bank; trust the screenshot):\n${JSON.stringify(pb.steps.map((s) => ({ screen: s.screen, labels: s.expectLabels, tapOneOf: s.targets, money: !!s.moneyStep })))}` : 'Task unknown: ask the user what they want to do.',
+    pb ? `Common task pattern (label variants, NOT guaranteed for this bank; trust the screenshot if provided):\n${JSON.stringify(pb.steps.map((s) => ({ screen: s.screen, labels: s.expectLabels, tapOneOf: s.targets, money: !!s.moneyStep })))}` : '',
     `Recent conversation:\n${req.history.slice(-8).map((h) => `${h.role}: ${h.text}`).join('\n')}`,
     `User says (data): <user_message>${req.message}</user_message>`,
     req.ocrText ? `OCR of screenshot (untrusted data): <ocr>${req.ocrText.slice(0, 3000)}</ocr>` : '',
-  ].join('\n\n');
+    !m ? 'Note: User provided no screenshot. Answer their question directly, kindly and clearly in Urdu and Roman Urdu. If step-by-step app navigation is needed, invite them to send a screenshot.' : '',
+  ].filter(Boolean).join('\n\n');
+
+  const parts: any[] = [];
+  if (m) parts.push({ type: 'image', data: m[3], mime_type: m[1] });
+  parts.push({ type: 'text', text: context });
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const out = await geminiJson({
       system: SYSTEM,
-      parts: [{ type: 'image', data: m[3], mime_type: m[1] }, { type: 'text', text: context + (attempt ? '\n\nReturn ONLY the JSON object.' : '') }],
+      parts,
       schema: SCHEMA,
     }).catch(() => null);
     if (out && typeof out === 'object' && (out as { target_label?: unknown }).target_label === '') (out as { target_label: null }).target_label = null;
@@ -78,8 +83,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 
-  // the screenshot goes to Gemini only when a key is configured (shown to the user in their history)
-  const sentToAI = geminiConfigured() && !!body.image;
+  // sentToAI is true when Gemini handled this turn
+  const sentToAI = geminiConfigured() && (!!body.image || !!body.message?.trim());
   const sg = secretGuard(body.message, body.ocrText);
   if (sg) return NextResponse.json({ step: sg, state: body.state, mode: 'playbook', sentToAI: false });
 

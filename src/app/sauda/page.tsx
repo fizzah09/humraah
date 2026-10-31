@@ -60,7 +60,15 @@ export default function SaudaPage() {
   };
 
   const voice = () => {
-    const stop = listen('ur-PK', (t) => { setText((x) => (x ? x + '\n' : '') + t); setListening(false); }, () => setListening(false));
+    if (listening) return;
+    const stop = listen('ur-PK', (t) => {
+      setText((x) => {
+        const next = (x ? x + '\n' : '') + t;
+        calc(next);
+        return next;
+      });
+      setListening(false);
+    }, () => setListening(false));
     if (stop) setListening(true);
   };
 

@@ -92,8 +92,7 @@ export default function AssistantPage() {
     setLoading(true);
     try {
       const { ok, status, data } = await apiPost<any>('/api/assistant', { message, image: img?.dataUrl ?? null, ocrText: img?.ocr?.text, state, history: history() });
-      if (status === 401) throw new Error('login');
-      if (!ok) throw new Error(data.error ?? 'error');
+      if (!ok) throw new Error(data?.error ?? (status === 401 ? 'login' : 'error'));
       setState(data.state);
       const step: AssistantStep = data.step;
       if (img) updateImageMeta(img.logId, { sentToAI: !!data.sentToAI });
@@ -111,12 +110,12 @@ export default function AssistantPage() {
       setMsgs((m) => [...m, { id: nextId++, role: 'assistant', step, mode: data.mode, image: highlight ? img!.dataUrl : undefined, highlight, logId: img?.logId }]);
       if (autoSpeak) speakUrdu(step.next_instruction_ur, step.next_instruction_roman);
     } catch (err) {
-      if ((err as Error).message === 'login') { location.reload(); return; }
+      const isLogin = (err as Error).message === 'login';
       setMsgs((m) => [...m, {
         id: nextId++, role: 'assistant', step: {
           screen_name: 'error', confidence: 0, target_label: null, warnings: [], needs_clarification: true, is_money_step: false, task_complete: false,
-          next_instruction_ur: 'معذرت، ابھی جواب نہیں آ سکا۔ دوبارہ کوشش کریں یا اسکرین پر لکھے بٹن کے نام لکھ دیں۔',
-          next_instruction_roman: 'Maazrat, abhi jawab nahi aa saka. Dobara koshish karein ya screen par likhe button ke naam likh dein.',
+          next_instruction_ur: isLogin ? 'براہ کرم پہلے لاگ ان کر لیں، پھر سوال پوچھیں۔' : 'معذرت، ابھی جواب نہیں آ سکا۔ دوبارہ کوشش کریں یا اسکرین پر لکھے بٹن کے نام لکھ دیں۔',
+          next_instruction_roman: isLogin ? 'Meharbani kar ke pehle login karein, phir sawal poochein.' : 'Maazrat, abhi jawab nahi aa saka. Dobara koshish karein ya screen par likhe button ke naam likh dein.',
         },
       }]);
     } finally {
@@ -126,7 +125,14 @@ export default function AssistantPage() {
 
   const toggleMic = () => {
     if (listening) { stopRef.current?.(); setListening(false); return; }
-    const stop = listen('ur-PK', (t) => send(t), () => setListening(false));
+    const stop = listen('ur-PK', (t) => {
+      setInput(t);
+      send(t);
+    }, () => setListening(false), (err) => {
+      if (err === 'not-allowed') {
+        alert('Microphone access blocked. Please click the mic icon in your browser address bar to allow.');
+      }
+    });
     if (stop) { stopRef.current = stop; setListening(true); }
   };
 
