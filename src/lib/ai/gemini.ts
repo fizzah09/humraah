@@ -6,9 +6,10 @@
 import 'server-only';
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+const INTERACTIONS_API = 'https://generativelanguage.googleapis.com/v1beta/interactions';
 export const geminiConfigured = () => !!process.env.GEMINI_API_KEY;
 const TEXT_MODEL = () => process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-const TTS_MODEL = () => process.env.GEMINI_TTS_MODEL || 'gemini-1.5-flash';
+const TTS_MODEL = () => process.env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-tts';
 const TTS_VOICE = () => process.env.GEMINI_TTS_VOICE || 'Kore';
 
 type Part = { type: 'text'; text: string } | { type: 'image'; data: string; mime_type: string };
@@ -80,8 +81,47 @@ export async function geminiJson(opts: {
   return null;
 }
 
-/** Urdu text-to-speech — falls back to null (browser TTS used instead). */
-export async function geminiSpeech(_text: string): Promise<string | null> {
-  // Standard Gemini REST API does not support TTS; browser SpeechSynthesis is used instead.
-  return null;
+/** Generate WAV audio with Gemini's speech-generation endpoint. */
+export async function geminiSpeech(text: string): Promise<string> {
+  const res = await fetch(INTERACTIONS_API, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-goog-api-key': process.env.GEMINI_API_KEY!,
+    },
+    body: JSON.stringify({
+      model: TTS_MODEL(),
+      input: [{
+        type: 'user_input',
+        content: [{
+          type: 'text',
+          text,
+          annotations: [{ type: 'speech_metadata', style: 'Speak clearly and warmly in Urdu.' }],
+        }],
+      }],
+      response_format: { type: 'audio' },
+      generation_config: { speech_config: [{ voice: TTS_VOICE() }] },
+    }),
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Gemini TTS ${res.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const data: unknown = await res.json();
+  if (!data || typeof data !== 'object') throw new Error('Gemini TTS returned an invalid response');
+  const response = data as {
+    output_audio?: { data?: unknown };
+    steps?: Array<{ type?: unknown; content?: Array<{ type?: unknown; data?: unknown }> }>;
+  };
+  const stepAudio = response.steps
+    ?.filter((step) => step.type === 'model_output')
+    .flatMap((step) => step.content ?? [])
+    .reverse()
+    .find((part) => part.type === 'audio' && typeof part.data === 'string')?.data;
+  const audio = response.output_audio?.data ?? stepAudio;
+  if (typeof audio !== 'string' || !audio) throw new Error('Gemini TTS response did not contain audio');
+  return audio;
 }

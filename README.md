@@ -1,4 +1,4 @@
-# Bank Saathi: AI Banking Companion (Build4Better 2026)
+# Humraah: AI Banking Companion (Build4Better 2026)
 
 Urdu-first web app (PWA) that helps people in Pakistan use their banking apps and understand their money.
 **Not a bank, not affiliated with any bank, never moves money, never asks for PIN / password / OTP.**
@@ -95,7 +95,7 @@ Stored layout (all values are AES-256-GCM ciphertext made on the phone):
 ### 1. Gemini key (AI + Urdu voice)
 1. Open <https://aistudio.google.com/apikey> → **Create API key** (in a Google Cloud project you own).
 2. Put it in `.env.local` as `GEMINI_API_KEY=...`. It is read only on the server (`src/lib/ai/gemini.ts` has `import 'server-only'`), so it never reaches the browser.
-3. Optional: `GEMINI_MODEL`, `GEMINI_TTS_MODEL`, `GEMINI_TTS_VOICE` if Google renames models (check <https://ai.google.dev/gemini-api/docs/models>).
+3. Optional: `GEMINI_MODEL`, `GEMINI_TTS_MODEL`, `GEMINI_TTS_VOICE` to choose models and voice (see <https://ai.google.dev/gemini-api/docs/speech-generation>).
 4. In AI Studio, set a **spending cap / quota** for the project so a bug can't run up a bill.
 
 ### 2. Firebase login + Firestore
@@ -114,13 +114,9 @@ Import the repo → **Settings → Environment Variables**: add every key from `
 add the Vercel domain to Firebase **Authorized domains** (step 2.3).
 
 ### What was and wasn't tested
-Tested here: unit tests, type check, production build, mobile (390px) run of every page in demo mode, API limits (413 on big bodies,
-204 TTS fallback, Urdu clarifying question). **Not tested live:** real Gemini calls and real Firebase login, because they need your keys.
+Unit tests and TypeScript checks pass. **Not tested live:** Gemini speech generation and Firebase login, because they require your keys.
 After adding keys, test: Google login → create code → add a kharcha → log in on a second browser → data appears; Saathi with a screenshot;
-"Sunein" button speaks.
-
-**Urdu voice note:** Google's Gemini TTS language list (Oct 2026) does not list Urdu. The app asks Gemini to read Urdu anyway; if it returns
-no audio, the phone's own Urdu voice is used, and if the phone has none, a Hindi voice reads the Roman Urdu line (sounds close to Urdu).
+"Sunein" button plays server-generated speech. If speech generation fails, the browser falls back to its available Urdu or Roman Urdu voice.
 
 ## Tech stack
 Next.js 14 (App Router, TypeScript), Tailwind CSS (theme in `src/theme/colors.ts`), zod (strict AI output schema),

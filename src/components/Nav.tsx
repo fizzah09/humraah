@@ -41,9 +41,9 @@ export default function Nav() {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 shrink-0">
-            <span className="h-10 w-10 rounded-xl bg-primary text-white grid place-items-center font-bold text-lg">ب</span>
+            <span className="h-10 w-10 rounded-xl bg-primary text-white grid place-items-center font-bold text-lg">ہ</span>
             <span className="leading-tight hidden sm:block">
-              <span className="block font-bold text-ink">Bank Saathi</span>
+              <span className="block font-bold text-ink">Humraah</span>
               <span className="block text-xs text-inkMuted">Aap ka banking saathi</span>
             </span>
           </Link>

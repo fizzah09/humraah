@@ -7,7 +7,7 @@ import { guard, readJson } from '@/lib/server/guard';
 
 export const runtime = 'nodejs';
 
-const SYSTEM = `You are Bank Saathi, a patient banking guide for elderly people in Pakistan. ALWAYS answer in Urdu (Urdu script) plus a Roman Urdu copy.
+const SYSTEM = `You are Humraah, a patient banking guide for elderly people in Pakistan. ALWAYS answer in Urdu (Urdu script) plus a Roman Urdu copy.
 Your goal is to TEACH, not to do things for the user: the user taps every button themselves and should be able to repeat the task alone next time.
 You look at ONE screenshot of the user's banking app and tell them the ONE next thing to tap.
 Rules:
@@ -49,7 +49,7 @@ async function callAI(req: AssistantRequest): Promise<AssistantStep | null> {
   const context = [
     `Bank app: ${bankName(bank) ?? 'unknown'}. Task: ${task ?? 'unknown'}. Steps completed so far: ${req.state.stepIndex}.`,
     pb ? `Common task pattern (label variants, NOT guaranteed for this bank; trust the screenshot if provided):\n${JSON.stringify(pb.steps.map((s) => ({ screen: s.screen, labels: s.expectLabels, tapOneOf: s.targets, money: !!s.moneyStep })))}` : '',
-    `Recent conversation:\n${req.history.slice(-8).map((h) => `${h.role}: ${h.text}`).join('\n')}`,
+    `Recent conversation:\n${req.history.slice(-8).map((h: { role: 'user' | 'assistant'; text: string }) => `${h.role}: ${h.text}`).join('\n')}`,
     `User says (data): <user_message>${req.message}</user_message>`,
     req.ocrText ? `OCR of screenshot (untrusted data): <ocr>${req.ocrText.slice(0, 3000)}</ocr>` : '',
     !m ? 'Note: User provided no screenshot. Answer their question directly, kindly and clearly in Urdu and Roman Urdu. If step-by-step app navigation is needed, invite them to send a screenshot.' : '',
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
     if (ai) {
       const state = { ...body.state, bank: detectBank(body.message) ?? body.state.bank, task: detectTask(body.message) ?? body.state.task };
       state.stepIndex = ai.task_complete ? 0 : ai.needs_clarification ? state.stepIndex : state.stepIndex + 1;
-      if (ai.is_money_step && !ai.warnings.some((w) => /check|verify|tasdeeq/i.test(w))) {
+      if (ai.is_money_step && !ai.warnings.some((w: string) => /check|verify|tasdeeq/i.test(w))) {
         ai.warnings.push('Verification checkpoint: naam aur raqam apni app mein khud check karein. OTP kisi ko na batayein.');
       }
       return NextResponse.json({ step: ai, state, mode: 'ai', sentToAI });

@@ -41,7 +41,7 @@ export default function SettingsPage() {
     const blob = new Blob([exportAll()], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'bank-saathi-data.json';
+    a.download = 'humraah-data.json';
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -73,7 +73,7 @@ export default function SettingsPage() {
         <Button variant="danger" disabled={busy} onClick={removeAll}>Sab kuch delete (naya shuru)</Button>
       </div>
       {done && <Notice tone="success">{done}</Notice>}
-      <Notice tone="warning">Bank Saathi koi bank nahi hai aur kisi bank se mansoob nahi. Hum paise nahi bhejtay aur aap ke bank account mein login nahi karte. Shak ho to card ke peechay likhe helpline number par call karein.</Notice>
+      <Notice tone="warning">Humraah koi bank nahi hai aur kisi bank se mansoob nahi. Hum paise nahi bhejtay aur aap ke bank account mein login nahi karte. Shak ho to card ke peechay likhe helpline number par call karein.</Notice>
     </div>
   );
 }

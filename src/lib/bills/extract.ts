@@ -61,10 +61,10 @@ export function reminderDates(due: string): { label: string; date: string }[] {
 export function toIcs(b: { id: string; billerType: string; amount: number; dueDate: string }): string {
   const ds = b.dueDate.replace(/-/g, '');
   return [
-    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Bank Saathi//Bills//EN',
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Humraah//Bills//EN',
     'BEGIN:VEVENT', `UID:${b.id}@banksaathi`, `DTSTAMP:${ds}T090000`, `DTSTART;VALUE=DATE:${ds}`,
     `SUMMARY:${b.billerType} bill due - Rs. ${b.amount}`,
-    'DESCRIPTION:Pay in your own bank app. Bank Saathi reminder.',
+    'DESCRIPTION:Pay in your own bank app. Humraah reminder.',
     'BEGIN:VALARM', 'TRIGGER:-P7D', 'ACTION:DISPLAY', 'DESCRIPTION:Bill due in 7 days', 'END:VALARM',
     'BEGIN:VALARM', 'TRIGGER:-P2D', 'ACTION:DISPLAY', 'DESCRIPTION:Bill due in 2 days', 'END:VALARM',
     'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Bill due today', 'END:VALARM',

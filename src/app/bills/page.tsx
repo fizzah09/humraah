@@ -27,7 +27,7 @@ export default function BillsPage() {
     const t = today();
     bills.filter((b) => b.status === 'due').forEach((b) => {
       if (reminderDates(b.dueDate).some((r) => r.date === t)) {
-        try { new Notification('Bank Saathi: bill reminder', { body: `${b.billerType} ${rs(b.amount)} due ${b.dueDate}` }); } catch { /* unsupported */ }
+        try { new Notification('Humraah: bill reminder', { body: `${b.billerType} ${rs(b.amount)} due ${b.dueDate}` }); } catch { /* unsupported */ }
       }
     });
   }, [bills, notifPerm]);
@@ -52,7 +52,7 @@ export default function BillsPage() {
     setToast(`✓ Bill add ho gaya. ${d < 0 ? `🔔 Yeh bill ${-d} din late hai: jaldi bharein!` : d === 0 ? '🔔 Yeh bill AAJ bharna hai!' : `🔔 Aap ko yeh bill ${d} din mein (${b.dueDate}) bharna hai.`} App har screen ke upar yaad dilayegi: 7 din, 2 din aur aakhri din.`);
     logActivity('Bill yaad', 'shared', `${extracted ? 'Bill ki photo se' : 'Khud likh kar'} bill add kiya: ${b.billerType}, ${rs(b.amount)}, aakhri tareekh ${b.dueDate}${b.consumerMasked ? `, consumer ${b.consumerMasked}` : ''}.`);
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && d <= 7) {
-      try { new Notification('Bank Saathi: bill yaad', { body: `${b.billerType} ${rs(b.amount)} · ${b.dueDate}` }); } catch { /* unsupported */ }
+      try { new Notification('Humraah: bill yaad', { body: `${b.billerType} ${rs(b.amount)} · ${b.dueDate}` }); } catch { /* unsupported */ }
     }
   };
 

@@ -1,8 +1,8 @@
 {
-  "name": "bank-saathi",
+  "name": "humraah",
   "version": "1.0.0",
   "private": true,
-  "description": "Bank Saathi: Urdu-first AI banking companion (Build4Better 2026)",
+  "description": "Humraah: Urdu-first AI banking companion (Build4Better 2026)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

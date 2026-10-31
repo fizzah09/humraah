@@ -32,7 +32,7 @@ export default function HistoryPage() {
     const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
     const el = document.createElement('a');
     el.href = URL.createObjectURL(blob);
-    el.download = 'bank-saathi-history.txt';
+    el.download = 'humraah-history.txt';
     el.click();
     URL.revokeObjectURL(el.href);
   };

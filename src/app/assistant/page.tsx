@@ -41,7 +41,7 @@ const QUICK = [
 let nextId = 1;
 
 export default function AssistantPage() {
-  const { lang } = useLang();
+  const { lang, setLang } = useLang();
   const canSpeak = useSpeechSupported();
   const [msgs, setMsgs] = useState<Msg[]>([
     {
@@ -50,7 +50,7 @@ export default function AssistantPage() {
       step: {
         screen_name: 'welcome', confidence: 1, target_label: null, warnings: [], needs_clarification: false, is_money_step: false, task_complete: false,
         next_instruction_ur: 'السلام علیکم! میں آپ کا بینک ساتھی ہوں۔ بتائیں آپ کیا کرنا چاہتے ہیں؟',
-        next_instruction_roman: 'Assalam-o-Alaikum! Main aap ka Bank Saathi hoon. Batayein aap kya karna chahte hain?',
+        next_instruction_roman: 'Assalam-o-Alaikum! Main Humraah hoon. Batayein aap kya karna chahte hain?',
       },
     },
   ]);
@@ -84,6 +84,8 @@ export default function AssistantPage() {
 
   async function send(message: string, img?: UploadedImage) {
     if (!message.trim() && !img) return;
+    // Auto-switch to Urdu script display if the message contains Urdu/Arabic Unicode characters
+    if (/[\u0600-\u06FF]/.test(message)) setLang('ur');
     const userMsg: Msg = { id: nextId++, role: 'user', text: message || undefined, image: img?.dataUrl, logId: img?.logId };
     if (message.trim()) logActivity('Saathi', 'said', `Aap ne kaha: "${message.trim()}"`);
     if (img) scheduleImageDelete(img.logId);
@@ -156,9 +158,8 @@ export default function AssistantPage() {
         } else if (err === 'not-allowed') {
           setMicStatus('❌ Microphone block hai. Address bar mein lock icon par tap kar ke mic allow karein.');
         } else if (err === 'network') {
-          // network error — speech.ts already retried with hi-IN/en-US
-          // show a helpful message but keep the input box active for typing
-          setMicStatus('⚠️ Speech server available nahi. Neeche likh kar Bhejein.');
+          // network error: speech.ts retries ur-PK once; if still failing show message
+          setMicStatus('⚠️ Urdu speech server se rabta nahi hua. Dobara mic dabayein ya neeche likh kar bhejen.');
         } else {
           setMicStatus('Awaaz record nahi ho saki — dobara koshish karein.');
         }
@@ -315,12 +316,12 @@ function BotBubble({ m, lang }: { m: Msg; lang: 'ur' | 'roman' }) {
         {s.why_roman && (
           <p className="text-[16px] text-inkSecondary bg-white border border-border rounded-xl px-4 py-2"><b className="text-primaryDark">Kyun?</b> {s.why_roman}</p>
         )}
-        {s.warnings.map((w) => <Notice key={w} tone="warning">{w}</Notice>)}
+        {s.warnings.map((w: string) => <Notice key={w} tone="warning">{w}</Notice>)}
         {s.task_complete && (
           <div className="rounded-2xl border border-primaryLight bg-successBg p-4 space-y-2">
             <p className="font-bold text-primaryDark">Shabash, aap ne khud kar liya! Kya kaam ho gaya? Agli baar ke liye yaad rakhein:</p>
             <ol className="list-decimal ps-5 text-inkSecondary">
-              {(s.recap_roman ?? []).map((r) => <li key={r}>{r}</li>)}
+              {(s.recap_roman ?? []).map((r: string) => <li key={r}>{r}</li>)}
             </ol>
             <div className="flex gap-4 flex-wrap">
               <Link href="/ledger" className="text-primary font-semibold hover:underline">Kharcha diary mein likhein (kis liye paise gaye?) →</Link>

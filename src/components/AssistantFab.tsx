@@ -9,7 +9,7 @@ export default function AssistantFab() {
   return (
     <Link
       href="/assistant"
-      aria-label="Open Bank Saathi assistant"
+      aria-label="Open Humraah assistant"
       className="assistant-fab fixed z-40 end-4 bottom-24 lg:bottom-8 h-16 w-16 rounded-full bg-primary text-white shadow-[0_8px_24px_rgba(11,122,75,0.35)] grid place-items-center hover:bg-primaryDark transition-colors"
     >
       <span className="absolute inset-0 rounded-full bg-primaryLight/40 animate-ping" aria-hidden />

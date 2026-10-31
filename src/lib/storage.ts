@@ -155,7 +155,7 @@ export function clearLocal() {
   cache.clear();
 }
 
-/** Deletes every Bank Saathi key on this device, including the login. */
+/** Deletes every Humraah key on this device, including the login. */
 export function deleteAll() {
   raw.keys().forEach((k) => raw.del(k));
   cache.clear();

@@ -168,8 +168,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-surfaceAlt flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md bg-white rounded-[28px] border border-border shadow-card p-6 sm:p-8 space-y-5">
         <div className="flex items-center gap-3">
-          <span className="h-12 w-12 rounded-2xl bg-primary text-white grid place-items-center font-bold text-xl">ب</span>
-          <div><p className="font-bold text-lg">Bank Saathi</p><p className="text-inkMuted text-sm">Aap ka banking saathi</p></div>
+          <span className="h-12 w-12 rounded-2xl bg-primary text-white grid place-items-center font-bold text-xl">ہ</span>
+          <div><p className="font-bold text-lg">Humraah</p><p className="text-inkMuted text-sm">Aap ka banking saathi</p></div>
         </div>
         {body}
       </div>
@@ -259,9 +259,9 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       {error && <Notice tone="warning">{error}</Notice>}
       <details className="text-[16px]">
         <summary className="cursor-pointer text-inkMuted">Code bhool gaye?</summary>
-        <p className="text-inkSecondary mt-2">Hifazat ki wajah se code ke baghair purana data nahi khul sakta. Aap naya shuru kar sakte hain: is phone par Bank Saathi ka <b>sara data delete</b> ho jayega. Aap ke bank account par koi asar nahi.</p>
+        <p className="text-inkSecondary mt-2">Hifazat ki wajah se code ke baghair purana data nahi khul sakta. Aap naya shuru kar sakte hain: is phone par Humraah ka <b>sara data delete</b> ho jayega. Aap ke bank account par koi asar nahi.</p>
         <Button variant="danger" className="mt-2" onClick={async () => {
-          if (!confirm('Sara Bank Saathi data delete kar ke naya shuru karein?')) return;
+          if (!confirm('Sara Humraah data delete kar ke naya shuru karein?')) return;
           if (user) { try { await wipeRemote(user.uid); } catch { setError('Internet nahi: cloud ka data delete nahi hua. Dobara koshish karein.'); return; } }
           deleteAll(); setError(null); setPhase('welcome');
         }}>Naya shuru karein</Button>

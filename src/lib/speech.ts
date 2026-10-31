@@ -20,12 +20,11 @@ export function speechSupported(): boolean {
 }
 
 /**
- * Try multiple language codes in order until one starts successfully.
- * ur-PK needs Google's cloud STT; if network fails we fall back to hi-IN
- * (Hindi, phonetically closest to Roman Urdu) and then en-US.
+ * Retry ur-PK up to 2 times before giving up — NO Hindi fallback.
+ * The user speaks Urdu; we never silently switch to Hindi.
  */
 const LANG_FALLBACKS: Record<string, string[]> = {
-  'ur-PK': ['ur-PK', 'ur', 'hi-IN', 'en-US'],
+  'ur-PK': ['ur-PK', 'ur-PK'], // retry same lang once on transient network error
 };
 
 export function listen(

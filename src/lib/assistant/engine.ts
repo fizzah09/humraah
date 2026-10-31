@@ -78,7 +78,7 @@ function answerGeneralQuestion(msg: string, b?: string | null): AssistantStep | 
   if (/^(salam|assalam|aoa|hello|hi|hey|adaab|kese ho|kaise ho|kya haal|assalam-o-alaikum)\b|سلام|وعلیکم/i.test(m)) {
     return base({
       next_instruction_ur: 'وعلیکم السلام! میں بینک ساتھی ہوں۔ میں آپ کو بینک ایپ چلانے، بیلنس دیکھنے، رقم بھیجنے اور بل بھرنے میں قدم بہ قدم رہنمائی کروں گا۔ بتائیں کیا مدد چاہیے؟',
-      next_instruction_roman: 'Walaikum Assalam! Main Bank Saathi hoon. Main aap ko bank app chalane, balance dekhne, raqam bhejne aur bill bharne mein madad karunga. Batayein kya madad chahiye?',
+      next_instruction_roman: 'Walaikum Assalam! Main Humraah hoon. Main aap ko bank app chalane, balance dekhne, raqam bhejne aur bill bharne mein madad karunga. Batayein kya madad chahiye?',
     });
   }
 

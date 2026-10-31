@@ -38,7 +38,7 @@ export default function ScamPage() {
   const v = result ? VERDICT_TEXT[result.verdict] : null;
 
   const share = async () => {
-    const msg = `⚠ Bank Saathi warning: yeh message dhoka lagta hai. Is ke link par click na karein, OTP/PIN kisi ko na batayein. Bank ko sirf card ke peechay likhe number par call karein.\n\n"${checked.slice(0, 200)}"`;
+    const msg = `⚠ Humraah warning: yeh message dhoka lagta hai. Is ke link par click na karein, OTP/PIN kisi ko na batayein. Bank ko sirf card ke peechay likhe number par call karein.\n\n"${checked.slice(0, 200)}"`;
     if (navigator.share) { try { await navigator.share({ text: msg }); return; } catch { /* cancelled */ } }
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
   };
