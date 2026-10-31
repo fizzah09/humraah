@@ -21,9 +21,10 @@ export function speechSupported(): boolean {
 
 export function listen(
   lang: string,
-  onText: (t: string) => void,
+  onFinal: (t: string) => void,
   onEnd: () => void,
-  onError?: (err: string) => void
+  onError?: (err: string) => void,
+  onInterim?: (t: string) => void
 ): (() => void) | null {
   if (typeof window === 'undefined') return null;
   const w = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR };
@@ -31,23 +32,39 @@ export function listen(
   if (!Ctor) return null;
 
   let stopped = false;
+  let lastText = '';
+  let finalDelivered = false;
+
   try {
     const r = new Ctor();
     // Default to Pakistani Urdu for speech input
     r.lang = lang || 'ur-PK';
-    r.interimResults = false;
+    r.interimResults = true;
     r.continuous = false;
     r.maxAlternatives = 1;
 
     r.onresult = (e: any) => {
-      let text = '';
+      let finalTranscript = '';
+      let interimTranscript = '';
       for (let i = 0; i < (e.results?.length ?? 0); i++) {
         const item = e.results[i];
         if (item?.[0]?.transcript) {
-          text += (text ? ' ' : '') + item[0].transcript;
+          if (item.isFinal) {
+            finalTranscript += (finalTranscript ? ' ' : '') + item[0].transcript;
+          } else {
+            interimTranscript += (interimTranscript ? ' ' : '') + item[0].transcript;
+          }
         }
       }
-      if (text.trim()) onText(text.trim());
+      const current = (finalTranscript || interimTranscript).trim();
+      if (current) {
+        lastText = current;
+        onInterim?.(current);
+      }
+      if (finalTranscript.trim() && !finalDelivered) {
+        finalDelivered = true;
+        onFinal(finalTranscript.trim());
+      }
     };
 
     r.onerror = (e: any) => {
@@ -63,14 +80,24 @@ export function listen(
     r.onend = () => {
       if (!stopped) {
         stopped = true;
+        if (lastText.trim() && !finalDelivered) {
+          finalDelivered = true;
+          onFinal(lastText.trim());
+        }
         onEnd();
       }
     };
 
     r.start();
     return () => {
-      stopped = true;
-      try { r.stop(); } catch {}
+      if (!stopped) {
+        stopped = true;
+        try { r.stop(); } catch {}
+        if (lastText.trim() && !finalDelivered) {
+          finalDelivered = true;
+          onFinal(lastText.trim());
+        }
+      }
     };
   } catch (err) {
     console.warn('SpeechRecognition failed to start:', err);

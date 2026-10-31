@@ -48,22 +48,32 @@ export default function LedgerPage() {
 
   const voice = () => {
     if (listening) return;
-    const stop = listen('ur-PK', (t) => {
-      const a = parseAmount(t);
-      if (a) setAmount(String(a));
-      const p = guessPurpose(t);
-      if (p) setPurpose(p);
-      setNote(t);
-      setListening(false);
-      if (a) {
-        setMsg(`Awaaz se raqam darj ho gayi: Rs. ${a}. Niche "Kharcha likhein" par tap karein.`);
-      } else {
-        setMsg(`Awaaz suni: "${t}". Raqam khud likh dein.`);
+    const stop = listen(
+      'ur-PK',
+      (t) => {
+        const a = parseAmount(t);
+        if (a) setAmount(String(a));
+        const p = guessPurpose(t);
+        if (p) setPurpose(p);
+        setNote(t);
+        setListening(false);
+        if (a) {
+          setMsg(`Awaaz se raqam darj ho gayi: Rs. ${a}. Niche "Kharcha likhein" par tap karein.`);
+        } else {
+          setMsg(`Awaaz suni: "${t}". Raqam khud likh dein.`);
+        }
+      },
+      () => setListening(false),
+      (err) => {
+        setListening(false);
+        if (err === 'not-allowed') setMsg('Microphone ki ijazat dein (address bar se allow karein).');
+        else if (err === 'no-speech') setMsg('Awaaz sunai nahi di. Dobara bolein.');
+        else setMsg('Awaaz record nahi ho saki.');
+      },
+      (interim) => {
+        setMsg(`Sun raha hoon: "${interim}"...`);
       }
-    }, () => setListening(false), (err) => {
-      setListening(false);
-      if (err === 'not-allowed') setMsg('Microphone ki ijazat dein (address bar se allow karein).');
-    });
+    );
     if (stop) {
       setListening(true);
       setMsg('Bol kar batayein (jaise: "paanch hazaar rashan")...');

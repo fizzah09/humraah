@@ -58,6 +58,7 @@ export default function AssistantPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [micStatus, setMicStatus] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [autoSpeak, setAutoSpeak] = useStored<boolean>('autoSpeak', true);
   const stopRef = useRef<(() => void) | null>(null);
@@ -124,16 +125,41 @@ export default function AssistantPage() {
   }
 
   const toggleMic = () => {
-    if (listening) { stopRef.current?.(); setListening(false); return; }
-    const stop = listen('ur-PK', (t) => {
-      setInput(t);
-      send(t);
-    }, () => setListening(false), (err) => {
-      if (err === 'not-allowed') {
-        alert('Microphone access blocked. Please click the mic icon in your browser address bar to allow.');
+    if (listening) {
+      stopRef.current?.();
+      setListening(false);
+      setMicStatus(null);
+      if (input.trim()) {
+        send(input.trim());
       }
-    });
-    if (stop) { stopRef.current = stop; setListening(true); }
+      return;
+    }
+    setMicStatus('Sun raha hoon... bolein');
+    const stop = listen(
+      'ur-PK',
+      (t) => {
+        setMicStatus(null);
+        setInput(t);
+        send(t);
+      },
+      () => {
+        setListening(false);
+      },
+      (err) => {
+        if (err === 'no-speech') setMicStatus('Awaaz sunai nahi di. Dobara bolein ya likhein.');
+        else if (err === 'not-allowed') setMicStatus('Microphone block hai. Browser address bar se mic allow karein.');
+        else if (err === 'network') setMicStatus('Speech server se rabta nahi ho saka. Likh kar bhejein.');
+        else setMicStatus('Awaaz record nahi ho saki. Dobara koshish karein.');
+        setTimeout(() => setMicStatus(null), 5000);
+      },
+      (interim) => {
+        setInput(interim);
+      }
+    );
+    if (stop) {
+      stopRef.current = stop;
+      setListening(true);
+    }
   };
 
   return (
@@ -196,8 +222,8 @@ export default function AssistantPage() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Likhein… (Urdu, Roman Urdu ya English)"
-            className="flex-1 min-w-0 min-h-[48px] px-4 rounded-xl border border-borderStrong focus:outline-none focus:border-primary focus:ring-4 focus:ring-primaryTint"
+            placeholder={listening ? "🔴 Sun raha hoon... bolein" : "Likhein… (Urdu, Roman Urdu ya English)"}
+            className={`flex-1 min-w-0 min-h-[48px] px-4 rounded-xl border ${listening ? 'border-danger ring-2 ring-danger/20' : 'border-borderStrong'} focus:outline-none focus:border-primary focus:ring-4 focus:ring-primaryTint`}
             aria-label="Message"
           />
           {canSpeak && (
@@ -207,6 +233,11 @@ export default function AssistantPage() {
           )}
           <Button type="submit" disabled={loading || !input.trim()} className="shrink-0 !px-4" aria-label="Bhejein">Bhejein</Button>
         </form>
+        {micStatus && (
+          <p className={`text-sm font-semibold ${listening ? 'text-primary' : 'text-danger'}`}>
+            🎙️ {micStatus}
+          </p>
+        )}
         <label className="flex items-center gap-2 text-[15px] text-inkSecondary">
           <input type="checkbox" className="h-5 w-5 accent-primary" checked={autoSpeak} onChange={(e) => { setAutoSpeak(e.target.checked); if (!e.target.checked) stopSpeaking(); }} />
           🔊 Saathi jawab khud bol kar sunaye (Urdu)
