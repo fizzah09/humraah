@@ -18,6 +18,8 @@ export interface SaudaItem {
 const NUM_WORDS: Record<string, number> = {
   aadha: 0.5, adha: 0.5, half: 0.5, pao: 0.25, paao: 0.25, sawa: 1.25, dedh: 1.5, dhai: 2.5,
   ek: 1, aik: 1, do: 2, teen: 3, char: 4, chaar: 4, paanch: 5, panch: 5, chhe: 6, che: 6, saat: 7, aath: 8, nau: 9, das: 10, barah: 12, bees: 20,
+  'آدھا': 0.5, 'پاؤ': 0.25, 'سوا': 1.25, 'ڈیڑھ': 1.5, 'ڈھائی': 2.5,
+  'ایک': 1, 'دو': 2, 'تین': 3, 'چار': 4, 'پانچ': 5, 'چھ': 6, 'سات': 7, 'آٹھ': 8, 'نو': 9, 'دس': 10, 'بارہ': 12, 'بیس': 20,
 };
 
 const UNIT_RE: [RegExp, Unit, number][] = [
@@ -70,7 +72,11 @@ export function parseLine(line: string): SaudaItem {
   const letters = (raw.match(/[a-z؀-ۿ]/gi) ?? []).length;
   if (letters < 2) return { ...base, problem: 'unreadable' };
 
-  let text = raw.toLowerCase().replace(/rs\.?|pkr|روپے|rupay|rupees?/g, ' ').replace(/[=:,]/g, ' ');
+  let text = raw.toLowerCase()
+    .replace(/[۰٠]/g, '0').replace(/[۱١]/g, '1').replace(/[۲٢]/g, '2').replace(/[۳٣]/g, '3')
+    .replace(/[۴٤]/g, '4').replace(/[۵٥]/g, '5').replace(/[۶٦]/g, '6').replace(/[۷٧]/g, '7')
+    .replace(/[۸٨]/g, '8').replace(/[۹٩]/g, '9')
+    .replace(/rs\.?|pkr|روپے|rupay|rupees?/g, ' ').replace(/[=:,]/g, ' ');
   // "@ 220" or "220/kg" -> rate
   let rate: number | null = null;
   const at = text.match(/@\s*(\d+(?:\.\d+)?)/) ?? text.match(/(\d+(?:\.\d+)?)\s*\/\s*(kg|kilo|litre|ltr|dozen|darjan|piece|adad)/);

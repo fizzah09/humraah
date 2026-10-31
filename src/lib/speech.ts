@@ -2,25 +2,81 @@
 import { useEffect, useState } from 'react';
 /* Browser Web Speech API helpers. Urdu support depends on the device; typed input is always available. */
 
-type SR = { lang: string; interimResults: boolean; onresult: (e: { results: { 0: { transcript: string } }[] }) => void; onerror: () => void; onend: () => void; start: () => void; stop: () => void };
+type SR = {
+  lang: string;
+  interimResults: boolean;
+  continuous?: boolean;
+  maxAlternatives?: number;
+  onresult: (e: any) => void;
+  onerror: (e: any) => void;
+  onend: () => void;
+  start: () => void;
+  stop: () => void;
+};
 
 export function speechSupported(): boolean {
   if (typeof window === 'undefined') return false;
   return 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
 }
 
-export function listen(lang: string, onText: (t: string) => void, onEnd: () => void): (() => void) | null {
+export function listen(
+  lang: string,
+  onText: (t: string) => void,
+  onEnd: () => void,
+  onError?: (err: string) => void
+): (() => void) | null {
+  if (typeof window === 'undefined') return null;
   const w = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR };
   const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
   if (!Ctor) return null;
-  const r = new Ctor();
-  r.lang = lang;
-  r.interimResults = false;
-  r.onresult = (e) => onText(e.results[0][0].transcript);
-  r.onerror = onEnd;
-  r.onend = onEnd;
-  r.start();
-  return () => r.stop();
+
+  let stopped = false;
+  try {
+    const r = new Ctor();
+    // Default to Pakistani Urdu for speech input
+    r.lang = lang || 'ur-PK';
+    r.interimResults = false;
+    r.continuous = false;
+    r.maxAlternatives = 1;
+
+    r.onresult = (e: any) => {
+      let text = '';
+      for (let i = 0; i < (e.results?.length ?? 0); i++) {
+        const item = e.results[i];
+        if (item?.[0]?.transcript) {
+          text += (text ? ' ' : '') + item[0].transcript;
+        }
+      }
+      if (text.trim()) onText(text.trim());
+    };
+
+    r.onerror = (e: any) => {
+      const err = e?.error ?? 'error';
+      console.warn('SpeechRecognition error:', err);
+      onError?.(err);
+      if (!stopped) {
+        stopped = true;
+        onEnd();
+      }
+    };
+
+    r.onend = () => {
+      if (!stopped) {
+        stopped = true;
+        onEnd();
+      }
+    };
+
+    r.start();
+    return () => {
+      stopped = true;
+      try { r.stop(); } catch {}
+    };
+  } catch (err) {
+    console.warn('SpeechRecognition failed to start:', err);
+    onEnd();
+    return null;
+  }
 }
 
 let current: HTMLAudioElement | null = null;

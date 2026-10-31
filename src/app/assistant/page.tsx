@@ -126,7 +126,7 @@ export default function AssistantPage() {
 
   const toggleMic = () => {
     if (listening) { stopRef.current?.(); setListening(false); return; }
-    const stop = listen(lang === 'ur' ? 'ur-PK' : 'en-IN', (t) => send(t), () => setListening(false));
+    const stop = listen('ur-PK', (t) => send(t), () => setListening(false));
     if (stop) { stopRef.current = stop; setListening(true); }
   };
 
