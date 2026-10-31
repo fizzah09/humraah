@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+html, body { background: #FFFFFF; color: #0A1410; }
+body { font-size: 18px; -webkit-font-smoothing: antialiased; }
+.font-urdu { line-height: 2.2; }
+[dir='rtl'] .font-urdu { text-align: right; }
+mark.flag { background: #FBE9E9; color: #D93F3F; border-radius: 4px; padding: 0 2px; font-weight: 600; }
+@media print {
+  nav, .no-print, .assistant-fab { display: none !important; }
+  body { font-size: 14px; }
+}
+
+/* "Bara text" toggle: scales the whole UI for weaker eyesight */
+html.big-text body { zoom: 1.18; }

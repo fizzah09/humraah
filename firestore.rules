@@ -1,0 +1,28 @@
+rules_version = '2';
+// Bank Saathi: each signed-in user can read/write ONLY their own documents.
+// Vault documents contain ciphertext only (encrypted on the phone with the user's Tasveer Code).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['salt', 'iterations', 'verifier', 'updatedAt'])
+        && request.resource.data.salt is string && request.resource.data.salt.size() < 64
+        && request.resource.data.verifier is string && request.resource.data.verifier.size() < 512
+        && request.resource.data.iterations is int && request.resource.data.iterations >= 100000;
+
+      match /vault/{key} {
+        allow read, delete: if request.auth != null && request.auth.uid == uid;
+        allow create, update: if request.auth != null && request.auth.uid == uid
+          && key.matches('^[A-Za-z0-9_-]{1,40}$')
+          && request.resource.data.keys().hasOnly(['ct', 'updatedAt'])
+          && request.resource.data.ct is string
+          && request.resource.data.ct.size() < 900000;
+      }
+    }
+    // everything else is closed
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
