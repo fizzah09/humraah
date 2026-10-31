@@ -126,39 +126,56 @@ export default function AssistantPage() {
 
   const toggleMic = () => {
     if (listening) {
+      // User tapped mic again = stop and send whatever we have
       stopRef.current?.();
       setListening(false);
       setMicStatus(null);
-      if (input.trim()) {
-        send(input.trim());
-      }
+      if (input.trim()) send(input.trim());
       return;
     }
-    setMicStatus('Sun raha hoon... bolein');
+    setInput('');
+    setMicStatus('🎙️ Sun raha hoon… bolein (ya likh kar Bhejein dabayein)');
     const stop = listen(
       'ur-PK',
       (t) => {
+        // Final speech result → auto-send
+        setListening(false);
         setMicStatus(null);
         setInput(t);
         send(t);
       },
       () => {
+        // Recognition ended (no error)
         setListening(false);
+        setMicStatus(null);
       },
       (err) => {
-        if (err === 'no-speech') setMicStatus('Awaaz sunai nahi di. Dobara bolein ya likhein.');
-        else if (err === 'not-allowed') setMicStatus('Microphone block hai. Browser address bar se mic allow karein.');
-        else if (err === 'network') setMicStatus('Speech server se rabta nahi ho saka. Likh kar bhejein.');
-        else setMicStatus('Awaaz record nahi ho saki. Dobara koshish karein.');
-        setTimeout(() => setMicStatus(null), 5000);
+        setListening(false);
+        if (err === 'no-speech') {
+          setMicStatus('Awaaz sunai nahi di — dobara bolein ya keyboard se likhein.');
+        } else if (err === 'not-allowed') {
+          setMicStatus('❌ Microphone block hai. Address bar mein lock icon par tap kar ke mic allow karein.');
+        } else if (err === 'network') {
+          // network error — speech.ts already retried with hi-IN/en-US
+          // show a helpful message but keep the input box active for typing
+          setMicStatus('⚠️ Speech server available nahi. Neeche likh kar Bhejein.');
+        } else {
+          setMicStatus('Awaaz record nahi ho saki — dobara koshish karein.');
+        }
+        setTimeout(() => setMicStatus(null), 7000);
       },
       (interim) => {
+        // Live streaming text into input box while speaking
         setInput(interim);
       }
     );
     if (stop) {
       stopRef.current = stop;
       setListening(true);
+    } else {
+      // Browser doesn't support speech API at all
+      setMicStatus('⚠️ Yeh browser mic support nahi karta. Chrome ya Edge use karein, ya keyboard se likhein.');
+      setTimeout(() => setMicStatus(null), 7000);
     }
   };
 

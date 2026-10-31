@@ -19,6 +19,15 @@ export function speechSupported(): boolean {
   return 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
 }
 
+/**
+ * Try multiple language codes in order until one starts successfully.
+ * ur-PK needs Google's cloud STT; if network fails we fall back to hi-IN
+ * (Hindi, phonetically closest to Roman Urdu) and then en-US.
+ */
+const LANG_FALLBACKS: Record<string, string[]> = {
+  'ur-PK': ['ur-PK', 'ur', 'hi-IN', 'en-US'],
+};
+
 export function listen(
   lang: string,
   onFinal: (t: string) => void,
@@ -31,79 +40,98 @@ export function listen(
   const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
   if (!Ctor) return null;
 
-  let stopped = false;
-  let lastText = '';
-  let finalDelivered = false;
+  const langs = LANG_FALLBACKS[lang] ?? [lang, 'en-US'];
+  let langIdx = 0;
 
-  try {
-    const r = new Ctor();
-    // Default to Pakistani Urdu for speech input
-    r.lang = lang || 'ur-PK';
-    r.interimResults = true;
-    r.continuous = false;
-    r.maxAlternatives = 1;
+  function tryLang(currentLang: string): (() => void) | null {
+    let stopped = false;
+    let lastText = '';
+    let finalDelivered = false;
+    let r: SR;
 
-    r.onresult = (e: any) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
-      for (let i = 0; i < (e.results?.length ?? 0); i++) {
-        const item = e.results[i];
-        if (item?.[0]?.transcript) {
-          if (item.isFinal) {
-            finalTranscript += (finalTranscript ? ' ' : '') + item[0].transcript;
-          } else {
-            interimTranscript += (interimTranscript ? ' ' : '') + item[0].transcript;
+    try {
+      r = new Ctor!();
+      r.lang = currentLang;
+      r.interimResults = true;
+      r.continuous = false;
+      r.maxAlternatives = 3; // more alternatives = better accuracy
+
+      r.onresult = (e: any) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+        for (let i = 0; i < (e.results?.length ?? 0); i++) {
+          const item = e.results[i];
+          if (item?.[0]?.transcript) {
+            if (item.isFinal) {
+              finalTranscript += (finalTranscript ? ' ' : '') + item[0].transcript;
+            } else {
+              interimTranscript += (interimTranscript ? ' ' : '') + item[0].transcript;
+            }
           }
         }
-      }
-      const current = (finalTranscript || interimTranscript).trim();
-      if (current) {
-        lastText = current;
-        onInterim?.(current);
-      }
-      if (finalTranscript.trim() && !finalDelivered) {
-        finalDelivered = true;
-        onFinal(finalTranscript.trim());
-      }
-    };
-
-    r.onerror = (e: any) => {
-      const err = e?.error ?? 'error';
-      console.warn('SpeechRecognition error:', err);
-      onError?.(err);
-      if (!stopped) {
-        stopped = true;
-        onEnd();
-      }
-    };
-
-    r.onend = () => {
-      if (!stopped) {
-        stopped = true;
-        if (lastText.trim() && !finalDelivered) {
-          finalDelivered = true;
-          onFinal(lastText.trim());
+        const current = (finalTranscript || interimTranscript).trim();
+        if (current) {
+          lastText = current;
+          onInterim?.(current);
         }
-        onEnd();
-      }
-    };
-
-    r.start();
-    return () => {
-      if (!stopped) {
-        stopped = true;
-        try { r.stop(); } catch {}
-        if (lastText.trim() && !finalDelivered) {
+        if (finalTranscript.trim() && !finalDelivered) {
           finalDelivered = true;
-          onFinal(lastText.trim());
+          onFinal(finalTranscript.trim());
         }
+      };
+
+      r.onerror = (e: any) => {
+        const err = e?.error ?? 'error';
+        console.warn(`SpeechRecognition error (lang=${currentLang}):`, err);
+
+        // network error: try next language fallback silently
+        if (err === 'network' && langIdx < langs.length - 1) {
+          langIdx++;
+          stopped = true;
+          console.info(`Retrying speech with lang=${langs[langIdx]}`);
+          tryLang(langs[langIdx]);
+          return;
+        }
+
+        onError?.(err);
+        if (!stopped) { stopped = true; onEnd(); }
+      };
+
+      r.onend = () => {
+        if (!stopped) {
+          stopped = true;
+          if (lastText.trim() && !finalDelivered) {
+            finalDelivered = true;
+            onFinal(lastText.trim());
+          }
+          onEnd();
+        }
+      };
+
+      r.start();
+      return () => {
+        if (!stopped) {
+          stopped = true;
+          try { r.stop(); } catch {}
+          if (lastText.trim() && !finalDelivered) {
+            finalDelivered = true;
+            onFinal(lastText.trim());
+          }
+        }
+      };
+    } catch (err) {
+      console.warn('SpeechRecognition failed to start:', err);
+      // try next language
+      if (langIdx < langs.length - 1) {
+        langIdx++;
+        return tryLang(langs[langIdx]);
       }
-    };
-  } catch (err) {
-    console.warn('SpeechRecognition failed to start:', err);
-    onEnd();
-    return null;
+      onEnd();
+      return null;
+    }
   }
+
+  return tryLang(langs[0]);
 }
 
 let current: HTMLAudioElement | null = null;
